@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.95"
+base64 = "0.22.1"
 clap = { version = "4.3.0", features = ["derive"] }

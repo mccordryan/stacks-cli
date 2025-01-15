@@ -2,6 +2,7 @@ use std::process::Command;
 use std::fs;
 use anyhow::{Result, Context};
 use clap::{Parser, Subcommand};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -79,21 +80,28 @@ fn generate_keys(keyname: &str, bits: u32) -> Result<()> {
         .strip_prefix("Modulus=")
         .context("Invalid modulus format")?;
 
-    // Format keys
-    let private_key = format!("{},{}", d.to_lowercase(), n.to_lowercase());
-    let public_key = format!("10001,{}", n.to_lowercase());
+    // Format keys with Base64 encoding
+    let private_key = format!(
+        "-----BEGIN RSA PRIVATE KEY-----\n{}\n-----END RSA PRIVATE KEY-----",
+        BASE64.encode(format!("{},{}", d.to_lowercase(), n.to_lowercase()).as_bytes())
+    );
+    
+    let public_key = format!(
+        "-----BEGIN RSA PUBLIC KEY-----\n{}\n-----END RSA PUBLIC KEY-----",
+        BASE64.encode(format!("10001,{}", n.to_lowercase()).as_bytes())
+    );
 
     // Write keys to files
     fs::write(format!("{}.pri", keyname), private_key)?;
     fs::write(format!("{}.pub", keyname), public_key)?;
-
+    
     // Clean up temporary PEM file
     fs::remove_file(temp_pem)?;
-
+    
     println!("Generated RSA key pair:");
     println!("  Private key: {}.pri", keyname);
     println!("  Public key: {}.pub", keyname);
-
+    
     Ok(())
 }
 
@@ -121,7 +129,6 @@ fn get_key(keyname: &str, pub_: bool, pri: bool) -> Result<()> {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-
     match &cli.command {
         Commands::Genrsa { keyname, bits } => {
             generate_keys(keyname, *bits)?;
@@ -130,6 +137,5 @@ fn main() -> Result<()> {
             get_key(keyname, *pub_, *pri)?;
         }
     }
-
     Ok(())
 }
